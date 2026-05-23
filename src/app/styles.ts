@@ -388,6 +388,10 @@ export const PANEL_STYLES = `
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.opx-register-profile-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .opx-session-converter-actions {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

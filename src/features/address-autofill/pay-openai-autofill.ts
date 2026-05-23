@@ -119,7 +119,6 @@ async function fillCheckoutFields(address: AddressProfile): Promise<number> {
   filled += fillInput('#billingLocality', address.city, true);
   filled += fillSelectOrInput('#billingAdministrativeArea', address.state, [address.stateFull, address.state]);
   filled += fillInput('#billingPostalCode', address.postalCode, true);
-  filled += fillInput('#phoneNumber', address.phone, false);
 
   filled += fillByAutocomplete('billing address-line1', address.line1);
   filled += fillByAutocomplete('billing address-line2', address.line2);

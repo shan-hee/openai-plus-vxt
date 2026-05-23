@@ -22,7 +22,9 @@ export interface RegisterController {
   refreshHimailDomains(): Promise<ActionResult>;
   createHimailEmailAndContinue(): Promise<ActionResult>;
   refreshHimailMessages(options?: { autoSubmit?: boolean }): Promise<ActionResult>;
+  fillProfile(): Promise<ActionResult>;
   fillProfileAndCreate(): Promise<ActionResult>;
+  clearRegisterState(): Promise<ActionResult>;
   autoRunForCurrentPage(): Promise<void>;
 }
 

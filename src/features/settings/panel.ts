@@ -48,7 +48,7 @@ export function createSettingsDialog(options: SettingsDialogOptions = {}): Setti
   const payOpenAiItem = createSettingItem(
     payOpenAiCheckbox,
     'OpenAI 支付页自动填写',
-    '用于 pay.openai.com/c/pay 页面，填写姓名、国家、地址、邮编、电话并勾选条款。',
+    '用于 pay.openai.com/c/pay 页面，填写姓名、国家、地址、邮编并勾选条款。',
   );
   const payPalSignupItem = createSettingItem(
     payPalSignupCheckbox,

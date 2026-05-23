@@ -1,6 +1,6 @@
 import { fillEmailAndContinue, isChatGptLoginPage } from './chatgpt-auth-page';
 import { fillOtpAndContinue, isEmailVerificationPage } from './openai-email-verification-page';
-import { fillAboutYouAndCreate, isAboutYouPage } from './openai-about-you-page';
+import { fillAboutYouAndCreate, fillAboutYouProfile, isAboutYouPage } from './openai-about-you-page';
 import { parseAccountInput } from './account-input';
 import { loadRegisterState, saveRegisterState } from '../../app/state';
 import type {
@@ -220,11 +220,39 @@ export function createRegisterController(): RegisterController {
         data: response,
       };
     },
+    fillProfile: async () => {
+      if (!isAboutYouPage()) {
+        return fail('当前页面不是资料填写页');
+      }
+      return fillAboutYouProfile();
+    },
     fillProfileAndCreate: async () => {
       if (!isAboutYouPage()) {
         return fail('当前页面不是资料填写页');
       }
       return fillAboutYouAndCreate();
+    },
+    clearRegisterState: async () => {
+      const state = await loadRegisterState();
+      await saveRegisterState({
+        rawInput: '',
+        email: '',
+        accountLine: '',
+        inputMode: 'empty',
+        autoOtp: false,
+        himailPrefix: '',
+        himailEmail: '',
+        himailMessages: [],
+        himailLastCode: '',
+        himailCreatedAt: 0,
+        himailLastFetchAt: 0,
+        himailPollEnabled: false,
+        otpRequestedAt: 0,
+        provider: state.provider,
+        himailDomain: state.himailDomain,
+        himailDomains: state.himailDomains,
+      });
+      return { ok: true, message: '已清空注册输入和 himail 邮箱状态' };
     },
     autoRunForCurrentPage: async () => {
       if (isEmailVerificationPage()) {

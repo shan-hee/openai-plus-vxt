@@ -35,6 +35,11 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
   const otpButton = createButton('填入验证码并继续');
   const autoOtpButton = createButton('自动接收并填入验证码', 'opx-button opx-button-secondary');
   const profileButton = createButton('填写资料并创建');
+  const profileActions = document.createElement('div');
+  profileActions.className = 'opx-button-row opx-register-profile-actions';
+  const fillProfileButton = createButton('填写资料', 'opx-button opx-button-secondary');
+  const clearButton = createButton('清空', 'opx-button opx-button-secondary');
+  profileActions.append(fillProfileButton, clearButton);
 
   defaultSection.append(accountInput, inputHint, emailButton, otp, otpButton, autoOtpButton);
 
@@ -118,6 +123,7 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
     himailRefreshButton.disabled = saved.provider !== 'himail' || !saved.himailEmail || mailFetchInFlight;
     himailReloadDomainsButton.disabled = saved.provider !== 'himail' || domainFetchInFlight;
     profileButton.disabled = !page.canFillProfile;
+    fillProfileButton.disabled = !page.canFillProfile;
     inputHint.textContent = saved.autoOtp
       ? 'Outlook 行模式：验证码页会通过本地 API 自动收码'
       : '单邮箱模式：验证码需要手动输入';
@@ -216,7 +222,20 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
     await update();
   });
 
-  container.append(providerField, defaultSection, himailSection, profileButton, status);
+  fillProfileButton.addEventListener('click', async () => {
+    setStatus(status, '正在填写资料...', 'pending');
+    setResult(status, await controller.fillProfile());
+    await update();
+  });
+
+  clearButton.addEventListener('click', async () => {
+    setStatus(status, '正在清空...', 'pending');
+    otp.value = '';
+    setResult(status, await controller.clearRegisterState());
+    await update();
+  });
+
+  container.append(providerField, defaultSection, himailSection, profileButton, profileActions, status);
   void update();
   return {
     update,

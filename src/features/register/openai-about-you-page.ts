@@ -39,7 +39,15 @@ export function isAboutYouPage(): boolean {
   return location.hostname === 'auth.openai.com' && location.pathname.startsWith('/about-you');
 }
 
+export async function fillAboutYouProfile(): Promise<ActionResult> {
+  return fillAboutYou({ submit: false });
+}
+
 export async function fillAboutYouAndCreate(): Promise<ActionResult> {
+  return fillAboutYou({ submit: true });
+}
+
+async function fillAboutYou(options: { submit: boolean }): Promise<ActionResult> {
   const nameInput = findNameInput();
   const ageInput = findAgeInput(nameInput);
 
@@ -62,6 +70,10 @@ export async function fillAboutYouAndCreate(): Promise<ActionResult> {
   ageInput.dispatchEvent(new Event('change', { bubbles: true }));
 
   await waitForUiTick();
+
+  if (!options.submit) {
+    return ok(`已填写 ${name} / ${age}`);
+  }
 
   const button = findCreateButton();
   if (!button) {

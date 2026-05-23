@@ -11,6 +11,8 @@ const DEFAULT_DOMAIN = 'imail.edu.vn';
 const SESSION_STORAGE_KEY = 'opx.himail.session';
 const CREATE_TIMEOUT_MS = 20_000;
 const FETCH_TIMEOUT_MS = 30_000;
+const CHALLENGE_MAX_RETRIES = 2;
+const CHALLENGE_RETRY_DELAY_MS = 5_500;
 const DOMAIN_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 interface LivewireInitialData {
@@ -31,6 +33,22 @@ interface HimailSession {
 let session: HimailSession | null = null;
 
 export async function fetchHimailDomains(): Promise<HimailDomainsResponse> {
+  try {
+    return await fetchHimailDomainsUnsafe();
+  } catch (error) {
+    if (isHimailChallengeError(error)) {
+      return {
+        ok: false,
+        message: error.message,
+        domains: [],
+        defaultDomain: DEFAULT_DOMAIN,
+      };
+    }
+    throw error;
+  }
+}
+
+async function fetchHimailDomainsUnsafe(): Promise<HimailDomainsResponse> {
   const page = await fetchPage(`${HIMAIL_BASE_URL}/`, '', CREATE_TIMEOUT_MS);
   const domains = extractDomains(page.html);
   if (!domains.length) {
@@ -51,6 +69,20 @@ export async function fetchHimailDomains(): Promise<HimailDomainsResponse> {
 }
 
 export async function createHimailEmail(prefixInput: string, domainInput: string): Promise<HimailCreateEmailResponse> {
+  try {
+    return await createHimailEmailUnsafe(prefixInput, domainInput);
+  } catch (error) {
+    if (isHimailChallengeError(error)) {
+      return {
+        ok: false,
+        message: error.message,
+      };
+    }
+    throw error;
+  }
+}
+
+async function createHimailEmailUnsafe(prefixInput: string, domainInput: string): Promise<HimailCreateEmailResponse> {
   const prefix = normalizePrefix(prefixInput) || randomPrefix();
   const home = await fetchPage(`${HIMAIL_BASE_URL}/`, '', CREATE_TIMEOUT_MS);
   const actions = findLivewireComponent(home.html, 'frontend.actions');
@@ -148,6 +180,23 @@ export async function createHimailEmail(prefixInput: string, domainInput: string
 }
 
 export async function fetchHimailMessages(emailInput?: string): Promise<HimailFetchMessagesResponse> {
+  try {
+    return await fetchHimailMessagesUnsafe(emailInput);
+  } catch (error) {
+    if (isHimailChallengeError(error)) {
+      return {
+        ok: false,
+        message: error.message,
+        email: emailInput,
+        messages: [],
+        fetchedAt: Date.now(),
+      };
+    }
+    throw error;
+  }
+}
+
+async function fetchHimailMessagesUnsafe(emailInput?: string): Promise<HimailFetchMessagesResponse> {
   session ||= await loadSession();
   if (!session?.app) {
     return {
@@ -216,7 +265,12 @@ export async function fetchHimailMessages(emailInput?: string): Promise<HimailFe
   };
 }
 
-async function fetchPage(url: string, cookies: string, timeoutMs: number): Promise<{ html: string; cookies: string; csrfToken: string }> {
+async function fetchPage(
+  url: string,
+  cookies: string,
+  timeoutMs: number,
+  attempt = 0,
+): Promise<{ html: string; cookies: string; csrfToken: string }> {
   const response = await fetchWithTimeout(url, {
     method: 'GET',
     headers: {
@@ -228,6 +282,13 @@ async function fetchPage(url: string, cookies: string, timeoutMs: number): Promi
   }, timeoutMs);
   const html = await response.text();
   const nextCookies = mergeCookies(cookies, getSetCookies(response.headers));
+  if (isHimailChallengePage(html)) {
+    if (attempt < CHALLENGE_MAX_RETRIES) {
+      await delay(CHALLENGE_RETRY_DELAY_MS);
+      return fetchPage(url, nextCookies, timeoutMs, attempt + 1);
+    }
+    throw new HimailChallengeError();
+  }
   return {
     html,
     cookies: nextCookies,
@@ -240,6 +301,7 @@ async function postLivewire(
   payload: Record<string, unknown>,
   csrfToken: string,
   cookies: string,
+  attempt = 0,
 ): Promise<{ json: Record<string, unknown>; cookies: string }> {
   const response = await fetchWithTimeout(`${HIMAIL_BASE_URL}/livewire/message/${component}`, {
     method: 'POST',
@@ -259,10 +321,19 @@ async function postLivewire(
     throw new Error(`himail Livewire 返回 ${response.status}：${shorten(text || response.statusText)}`);
   }
 
+  const nextCookies = getSetCookies(response.headers);
+  if (isHimailChallengePage(text)) {
+    if (attempt < CHALLENGE_MAX_RETRIES) {
+      await delay(CHALLENGE_RETRY_DELAY_MS);
+      return postLivewire(component, payload, csrfToken, mergeCookies(cookies, nextCookies), attempt + 1);
+    }
+    throw new HimailChallengeError();
+  }
+
   const json = parseJsonObject(text);
   return {
     json,
-    cookies: getSetCookies(response.headers),
+    cookies: nextCookies,
   };
 }
 
@@ -483,6 +554,33 @@ function parseJsonObject(text: string): Record<string, unknown> {
     // Fall through to the error below.
   }
   throw new Error(`himail 返回不是有效 JSON：${shorten(text)}`);
+}
+
+class HimailChallengeError extends Error {
+  constructor() {
+    super('imail.edu.vn 正在验证当前请求，已自动等待重试但仍未通过。请在浏览器打开 https://imail.edu.vn/mailbox 完成验证后再刷新，或更换网络/IP。');
+    this.name = 'HimailChallengeError';
+  }
+}
+
+function isHimailChallengeError(error: unknown): error is HimailChallengeError {
+  return error instanceof HimailChallengeError;
+}
+
+function isHimailChallengePage(text: string): boolean {
+  const normalized = shorten(text, 1200).toLowerCase();
+  return normalized.includes('<!doctype html') &&
+    (
+      normalized.includes('请稍候') ||
+      normalized.includes('正在验证您的请求') ||
+      normalized.includes('window.location.reload') ||
+      normalized.includes('checking your browser') ||
+      normalized.includes('just a moment')
+    );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function saveSession(value: HimailSession): Promise<void> {

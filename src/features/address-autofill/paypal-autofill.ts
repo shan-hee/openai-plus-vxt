@@ -180,7 +180,6 @@ async function fillPaypalSignupFields(address: AddressProfile, allowRetry: boole
   filled += fillText(PAYPAL_FIELDS.email, email, true);
   filled += fillPasswordField(email);
   renderPasswordEmailNote(email);
-  filled += fillText(PAYPAL_FIELDS.phone, address.phone, true);
   filled += fillText(PAYPAL_FIELDS.cardNumber, address.creditCard.number, true);
   filled += fillText(PAYPAL_FIELDS.expiry, expiry.short, true);
   filled += fillText(PAYPAL_FIELDS.csc, address.creditCard.cvv, true);
