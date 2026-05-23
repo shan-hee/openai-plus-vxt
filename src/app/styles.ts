@@ -314,6 +314,10 @@ export const PANEL_STYLES = `
   display: none;
 }
 
+.opx-register-section[hidden] {
+  display: none;
+}
+
 .opx-field {
   display: block;
   min-width: 0;
@@ -346,6 +350,14 @@ export const PANEL_STYLES = `
   grid-template-columns: minmax(0, 1fr);
 }
 
+.opx-himail-grid {
+  grid-template-columns: minmax(0, 1fr) 76px;
+}
+
+.opx-himail-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .opx-button {
   box-sizing: border-box;
   width: 100%;
@@ -359,6 +371,10 @@ export const PANEL_STYLES = `
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+}
+
+.opx-compact-button {
+  height: 36px;
 }
 
 .opx-button-secondary {
@@ -386,6 +402,64 @@ export const PANEL_STYLES = `
 
 .opx-status[data-type="error"] {
   color: #fca5a5;
+}
+
+.opx-himail-messages {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0 10px;
+}
+
+.opx-himail-empty {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(148, 163, 184, 0.24);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.opx-himail-message {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.opx-himail-message-title {
+  color: #e5f7ef;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.opx-himail-message-meta {
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 14px;
+  overflow-wrap: anywhere;
+}
+
+.opx-himail-message-body {
+  max-height: 96px;
+  overflow: auto;
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.opx-himail-code {
+  justify-self: start;
+  width: auto;
+  min-width: 96px;
+  margin: 0;
+  padding-inline: 9px;
 }
 
 .opx-settings-overlay {

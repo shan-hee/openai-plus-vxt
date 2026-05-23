@@ -1,7 +1,7 @@
 import { DEFAULT_CHECKOUT_OPTIONS, normalizeCheckoutOptions } from '../features/link-extractor/checkout';
 import type { FeatureTab } from './types';
 import type { LinkExtractorState } from '../features/link-extractor/types';
-import type { AccountInputMode, RegisterState } from '../features/register/types';
+import type { AccountInputMode, HimailEmailMessage, RegisterProvider, RegisterState } from '../features/register/types';
 import type { SmsCodeRecord, SmsRelayState } from '../features/sms/types';
 
 export const DEFAULT_API_BASE = 'http://127.0.0.1:8787';
@@ -17,12 +17,22 @@ interface AppState {
 }
 
 const DEFAULT_REGISTER_STATE: RegisterState = {
+  provider: 'default',
   rawInput: '',
   email: '',
   accountLine: '',
   inputMode: 'empty',
   autoOtp: false,
   apiBase: DEFAULT_API_BASE,
+  himailPrefix: '',
+  himailDomain: 'imail.edu.vn',
+  himailDomains: [],
+  himailEmail: '',
+  himailMessages: [],
+  himailLastCode: '',
+  himailCreatedAt: 0,
+  himailLastFetchAt: 0,
+  himailPollEnabled: false,
   otpRequestedAt: 0,
   updatedAt: 0,
 };
@@ -133,13 +143,24 @@ function normalizeAppState(value: unknown): AppState {
 
 function normalizeRegisterState(value: unknown): RegisterState {
   const source = isRecord(value) ? value : {};
+  const himailDomains = normalizeStringArray(source.himailDomains);
   return {
+    provider: normalizeRegisterProvider(source.provider),
     rawInput: String(source.rawInput || DEFAULT_REGISTER_STATE.rawInput),
     email: String(source.email || DEFAULT_REGISTER_STATE.email),
     accountLine: String(source.accountLine || DEFAULT_REGISTER_STATE.accountLine),
     inputMode: normalizeInputMode(source.inputMode),
     autoOtp: Boolean(source.autoOtp),
     apiBase: String(source.apiBase || DEFAULT_REGISTER_STATE.apiBase),
+    himailPrefix: String(source.himailPrefix || DEFAULT_REGISTER_STATE.himailPrefix),
+    himailDomain: String(source.himailDomain || himailDomains[0] || DEFAULT_REGISTER_STATE.himailDomain),
+    himailDomains,
+    himailEmail: String(source.himailEmail || DEFAULT_REGISTER_STATE.himailEmail),
+    himailMessages: normalizeHimailMessages(source.himailMessages),
+    himailLastCode: String(source.himailLastCode || DEFAULT_REGISTER_STATE.himailLastCode),
+    himailCreatedAt: Number(source.himailCreatedAt || DEFAULT_REGISTER_STATE.himailCreatedAt),
+    himailLastFetchAt: Number(source.himailLastFetchAt || DEFAULT_REGISTER_STATE.himailLastFetchAt),
+    himailPollEnabled: Boolean(source.himailPollEnabled),
     otpRequestedAt: Number(source.otpRequestedAt || DEFAULT_REGISTER_STATE.otpRequestedAt),
     updatedAt: Number(source.updatedAt || DEFAULT_REGISTER_STATE.updatedAt),
   };
@@ -188,6 +209,55 @@ function normalizeSmsCodeRecord(value: unknown): SmsCodeRecord | null {
 
 function normalizeInputMode(value: unknown): AccountInputMode {
   return value === 'email' || value === 'outlook-line' || value === 'invalid' ? value : 'empty';
+}
+
+function normalizeRegisterProvider(value: unknown): RegisterProvider {
+  return value === 'himail' ? 'himail' : 'default';
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return Array.from(new Set(
+    value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean),
+  ));
+}
+
+function normalizeHimailMessages(value: unknown): HimailEmailMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => normalizeHimailMessage(item))
+    .filter((item): item is HimailEmailMessage => Boolean(item));
+}
+
+function normalizeHimailMessage(value: unknown): HimailEmailMessage | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = String(value.id || '').trim();
+  const body = String(value.body || '').trim();
+  const subject = String(value.subject || '').trim();
+  if (!id && !body && !subject) {
+    return null;
+  }
+
+  return {
+    id: id || `${subject}-${Number(value.receivedAt || 0) || Date.now()}`,
+    from: String(value.from || '').trim(),
+    to: String(value.to || '').trim(),
+    subject,
+    date: String(value.date || '').trim(),
+    body,
+    code: String(value.code || '').trim(),
+    receivedAt: Number(value.receivedAt || 0) || Date.now(),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

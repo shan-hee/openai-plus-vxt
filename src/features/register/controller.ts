@@ -3,14 +3,26 @@ import { fillOtpAndContinue, isEmailVerificationPage } from './openai-email-veri
 import { fillAboutYouAndCreate, isAboutYouPage } from './openai-about-you-page';
 import { parseAccountInput } from './account-input';
 import { loadRegisterState, saveRegisterState } from '../../app/state';
-import type { ActionResult, PageState, RegisterController } from './types';
+import type {
+  ActionResult,
+  HimailCreateEmailResponse,
+  HimailDomainsResponse,
+  HimailFetchMessagesResponse,
+  PageState,
+  RegisterController,
+  RegisterProvider,
+} from './types';
 
 let autoProfileStarted = false;
+let autoHimailOtpStarted = false;
 
 export function createRegisterController(): RegisterController {
   return {
     getPageState,
     loadState: loadRegisterState,
+    saveProvider: async (provider: RegisterProvider) => {
+      return saveRegisterState({ provider });
+    },
     saveInput: async (rawInput: string) => {
       const parsed = parseAccountInput(rawInput);
       return saveRegisterState({
@@ -21,6 +33,7 @@ export function createRegisterController(): RegisterController {
         autoOtp: parsed.mode === 'outlook-line',
       });
     },
+    saveHimailOptions: async (patch) => saveRegisterState(patch),
     fillEmailFromInput: async () => {
       const state = await loadRegisterState();
       const parsed = parseAccountInput(state.rawInput);
@@ -78,6 +91,135 @@ export function createRegisterController(): RegisterController {
         message: fillResult.ok ? `已收到并提交验证码：${response.code}` : fillResult.message,
       };
     },
+    refreshHimailDomains: async () => {
+      const response: HimailDomainsResponse = await browser.runtime.sendMessage({
+        type: 'opx:himail-domains',
+      });
+
+      if (!isHimailDomainsResponse(response)) {
+        return fail('himail 后缀接口返回无效');
+      }
+
+      const state = await loadRegisterState();
+      const currentDomain = state.himailDomain && response.domains.includes(state.himailDomain)
+        ? state.himailDomain
+        : '';
+      await saveRegisterState({
+        himailDomains: response.domains,
+        himailDomain: currentDomain || response.defaultDomain || response.domains[0] || '',
+      });
+      return {
+        ok: response.ok,
+        message: response.message,
+        data: response,
+      };
+    },
+    createHimailEmailAndContinue: async () => {
+      if (!isChatGptLoginPage()) {
+        return fail('当前页面不是 ChatGPT 登录页');
+      }
+
+      const state = await loadRegisterState();
+      const prefix = normalizeHimailPrefix(state.himailPrefix) || randomHimailPrefix();
+      const domain = state.himailDomain || state.himailDomains[0] || 'imail.edu.vn';
+      const response: HimailCreateEmailResponse = await browser.runtime.sendMessage({
+        type: 'opx:himail-create-email',
+        prefix,
+        domain,
+      });
+
+      if (!isHimailCreateEmailResponse(response)) {
+        return fail('himail 创建邮箱返回无效');
+      }
+
+      if (!response.ok || !response.email) {
+        return {
+          ok: false,
+          message: response.message || 'himail 创建邮箱失败',
+          data: response,
+        };
+      }
+
+      await saveRegisterState({
+        provider: 'himail',
+        himailPrefix: response.prefix || prefix,
+        himailDomain: response.domain || domain,
+        himailDomains: response.domains || state.himailDomains,
+        himailEmail: response.email,
+        himailMessages: [],
+        himailLastCode: '',
+        himailCreatedAt: Date.now(),
+        himailLastFetchAt: 0,
+        himailPollEnabled: true,
+        email: response.email,
+      });
+
+      const fillResult = await fillEmailAndContinue(response.email);
+      return {
+        ...fillResult,
+        data: response,
+        message: fillResult.ok ? `已创建 ${response.email} 并提交` : fillResult.message,
+      };
+    },
+    refreshHimailMessages: async (options = {}) => {
+      const state = await loadRegisterState();
+      if (!state.himailEmail) {
+        return fail('请先创建 himail 邮箱');
+      }
+
+      const response: HimailFetchMessagesResponse = await browser.runtime.sendMessage({
+        type: 'opx:himail-fetch-messages',
+        email: state.himailEmail,
+      });
+
+      if (!isHimailFetchMessagesResponse(response)) {
+        return fail('himail 邮件接口返回无效');
+      }
+
+      const code = response.code || response.messages.find((message) => message.code)?.code || '';
+      await saveRegisterState({
+        himailMessages: response.messages,
+        himailLastCode: code,
+        himailLastFetchAt: response.fetchedAt || Date.now(),
+      });
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          message: response.message,
+          data: response,
+        };
+      }
+
+      if (code && options.autoSubmit) {
+        if (!isEmailVerificationPage()) {
+          return {
+            ok: true,
+            code,
+            message: `已收到验证码 ${code}，请切到验证码页后继续`,
+            data: response,
+          };
+        }
+
+        const fillResult = await fillOtpAndContinue(code);
+        if (fillResult.ok) {
+          void waitForAboutYouAndCreate();
+        }
+        return {
+          ...fillResult,
+          code,
+          data: response,
+          message: fillResult.ok ? `已收到并提交验证码：${code}` : fillResult.message,
+        };
+      }
+
+      return {
+        ok: true,
+        code,
+        message: code ? `已收到验证码：${code}` : response.message,
+        data: response,
+      };
+    },
     fillProfileAndCreate: async () => {
       if (!isAboutYouPage()) {
         return fail('当前页面不是资料填写页');
@@ -85,6 +227,11 @@ export function createRegisterController(): RegisterController {
       return fillAboutYouAndCreate();
     },
     autoRunForCurrentPage: async () => {
+      if (isEmailVerificationPage()) {
+        await autoRunHimailOtp();
+        return;
+      }
+
       if (!isAboutYouPage() || autoProfileStarted) {
         return;
       }
@@ -93,6 +240,49 @@ export function createRegisterController(): RegisterController {
       await fillAboutYouAndCreate();
     },
   };
+}
+
+async function autoRunHimailOtp(): Promise<void> {
+  if (autoHimailOtpStarted) {
+    return;
+  }
+
+  const state = await loadRegisterState();
+  if (state.provider !== 'himail' || !state.himailEmail || !state.himailPollEnabled) {
+    return;
+  }
+
+  autoHimailOtpStarted = true;
+  const deadline = Date.now() + 180_000;
+  try {
+    while (Date.now() <= deadline && isEmailVerificationPage()) {
+      const response = await browser.runtime.sendMessage({
+        type: 'opx:himail-fetch-messages',
+        email: state.himailEmail,
+      }) as HimailFetchMessagesResponse;
+
+      if (isHimailFetchMessagesResponse(response)) {
+        const code = response.code || response.messages.find((message) => message.code)?.code || '';
+        await saveRegisterState({
+          himailMessages: response.messages,
+          himailLastCode: code,
+          himailLastFetchAt: response.fetchedAt || Date.now(),
+        });
+
+        if (code) {
+          const fillResult = await fillOtpAndContinue(code);
+          if (fillResult.ok) {
+            await waitForAboutYouAndCreate();
+          }
+          return;
+        }
+      }
+
+      await delay(5_000);
+    }
+  } finally {
+    autoHimailOtpStarted = false;
+  }
 }
 
 function getPageState(): PageState {
@@ -148,6 +338,70 @@ function isActionResult(value: unknown): value is ActionResult {
   );
 }
 
+function isHimailDomainsResponse(value: unknown): value is HimailDomainsResponse {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as HimailDomainsResponse).ok === 'boolean' &&
+      typeof (value as HimailDomainsResponse).message === 'string' &&
+      Array.isArray((value as HimailDomainsResponse).domains),
+  );
+}
+
+function isHimailCreateEmailResponse(value: unknown): value is HimailCreateEmailResponse {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as HimailCreateEmailResponse).ok === 'boolean' &&
+      typeof (value as HimailCreateEmailResponse).message === 'string',
+  );
+}
+
+function isHimailFetchMessagesResponse(value: unknown): value is HimailFetchMessagesResponse {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as HimailFetchMessagesResponse).ok === 'boolean' &&
+      typeof (value as HimailFetchMessagesResponse).message === 'string' &&
+      Array.isArray((value as HimailFetchMessagesResponse).messages),
+  );
+}
+
+function normalizeHimailPrefix(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/@.*$/, '')
+    .replace(/[^a-z0-9._-]/g, '')
+    .replace(/^[._-]+|[._-]+$/g, '')
+    .slice(0, 48);
+}
+
+function randomHimailPrefix(): string {
+  return `opx${Math.random().toString(36).slice(2, 8)}${Date.now().toString().slice(-6)}`;
+}
+
 function waitForPageReady(): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, 800));
+}
+
+async function waitForAboutYouAndCreate(): Promise<void> {
+  if (autoProfileStarted) {
+    return;
+  }
+
+  const deadline = Date.now() + 45_000;
+  while (Date.now() <= deadline) {
+    if (isAboutYouPage()) {
+      autoProfileStarted = true;
+      await waitForPageReady();
+      await fillAboutYouAndCreate();
+      return;
+    }
+    await delay(500);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

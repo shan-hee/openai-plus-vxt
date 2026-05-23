@@ -3,7 +3,14 @@ import type { RandomAddressMessage } from '../src/features/address-autofill/type
 import { createCheckoutLink } from '../src/features/link-extractor/checkout';
 import { fetchChatGptSession } from '../src/features/link-extractor/session';
 import type { ChatGptSessionMessage, ChatGptSessionResponse, CheckoutLinkMessage } from '../src/features/link-extractor/types';
-import type { OutlookOtpMessage, OutlookOtpResponse } from '../src/features/register/types';
+import { createHimailEmail, fetchHimailDomains, fetchHimailMessages } from '../src/features/register/himail-client';
+import type {
+  HimailCreateEmailMessage,
+  HimailDomainsMessage,
+  HimailFetchMessagesMessage,
+  OutlookOtpMessage,
+  OutlookOtpResponse,
+} from '../src/features/register/types';
 import type { SmsRelayFetchMessage, SmsRelayFetchResponse } from '../src/features/sms/types';
 
 type MessageSenderLike = {
@@ -40,6 +47,15 @@ export default defineBackground(() => {
       }
       if (isSmsRelayFetchMessage(message)) {
         return fetchSmsRelay(message.url);
+      }
+      if (isHimailDomainsMessage(message)) {
+        return fetchHimailDomains();
+      }
+      if (isHimailCreateEmailMessage(message)) {
+        return createHimailEmail(message.prefix, message.domain);
+      }
+      if (isHimailFetchMessagesMessage(message)) {
+        return fetchHimailMessages(message.email);
       }
       return undefined;
     }
@@ -324,6 +340,32 @@ function isSmsRelayFetchMessage(message: unknown): message is SmsRelayFetchMessa
       typeof message === 'object' &&
       (message as SmsRelayFetchMessage).type === 'opx:fetch-sms-relay' &&
       typeof (message as SmsRelayFetchMessage).url === 'string',
+  );
+}
+
+function isHimailDomainsMessage(message: unknown): message is HimailDomainsMessage {
+  return Boolean(
+    message &&
+      typeof message === 'object' &&
+      (message as HimailDomainsMessage).type === 'opx:himail-domains',
+  );
+}
+
+function isHimailCreateEmailMessage(message: unknown): message is HimailCreateEmailMessage {
+  return Boolean(
+    message &&
+      typeof message === 'object' &&
+      (message as HimailCreateEmailMessage).type === 'opx:himail-create-email' &&
+      typeof (message as HimailCreateEmailMessage).prefix === 'string' &&
+      typeof (message as HimailCreateEmailMessage).domain === 'string',
+  );
+}
+
+function isHimailFetchMessagesMessage(message: unknown): message is HimailFetchMessagesMessage {
+  return Boolean(
+    message &&
+      typeof message === 'object' &&
+      (message as HimailFetchMessagesMessage).type === 'opx:himail-fetch-messages',
   );
 }
 

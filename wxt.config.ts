@@ -15,6 +15,7 @@ export default defineConfig({
       'https://www.meiguodizhi.com/*',
       'https://api.github.com/*',
       'https://mail-api.yuecheng.shop/*',
+      'https://imail.edu.vn/*',
     ],
   },
 });
