@@ -333,7 +333,7 @@ async function postLivewire(
   const json = parseJsonObject(text);
   return {
     json,
-    cookies: nextCookies,
+    cookies: mergeCookies(cookies, nextCookies),
   };
 }
 
@@ -367,7 +367,11 @@ function parseLivewireInitialData(value: string): LivewireInitialData | null {
     if (!isRecord(parsed) || !isRecord(parsed.fingerprint) || !isRecord(parsed.serverMemo)) {
       return null;
     }
-    return parsed as LivewireInitialData;
+    return {
+      fingerprint: parsed.fingerprint,
+      effects: isRecord(parsed.effects) ? parsed.effects : undefined,
+      serverMemo: parsed.serverMemo,
+    };
   } catch {
     return null;
   }
