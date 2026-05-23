@@ -203,7 +203,7 @@ export function createRegisterController(): RegisterController {
 
         const fillResult = await fillOtpAndContinue(code);
         if (fillResult.ok) {
-          void waitForAboutYouAndCreate();
+          void waitForAboutYouAndFillProfile();
         }
         return {
           ...fillResult,
@@ -265,7 +265,7 @@ export function createRegisterController(): RegisterController {
       }
       autoProfileStarted = true;
       await waitForPageReady();
-      await fillAboutYouAndCreate();
+      await fillAboutYouProfile();
     },
   };
 }
@@ -300,7 +300,7 @@ async function autoRunHimailOtp(): Promise<void> {
         if (code) {
           const fillResult = await fillOtpAndContinue(code);
           if (fillResult.ok) {
-            await waitForAboutYouAndCreate();
+            await waitForAboutYouAndFillProfile();
           }
           return;
         }
@@ -421,7 +421,7 @@ function waitForPageReady(): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, 800));
 }
 
-async function waitForAboutYouAndCreate(): Promise<void> {
+async function waitForAboutYouAndFillProfile(): Promise<void> {
   if (autoProfileStarted) {
     return;
   }
@@ -431,7 +431,7 @@ async function waitForAboutYouAndCreate(): Promise<void> {
     if (isAboutYouPage()) {
       autoProfileStarted = true;
       await waitForPageReady();
-      await fillAboutYouAndCreate();
+      await fillAboutYouProfile();
       return;
     }
     await delay(500);

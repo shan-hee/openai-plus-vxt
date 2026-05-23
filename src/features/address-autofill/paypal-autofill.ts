@@ -174,12 +174,13 @@ async function fillPaypalSignupFields(address: AddressProfile, allowRetry: boole
   }
 
   const email = await resolveEmail(address);
+  const password = address.identity.password || email;
   const name = splitName(address.fullName);
   const expiry = parseExpiry(address.creditCard.expires);
 
   filled += fillText(PAYPAL_FIELDS.email, email, true);
-  filled += fillPasswordField(email);
-  renderPasswordEmailNote(email);
+  filled += fillPasswordField(password);
+  renderPasswordNote(password, email);
   filled += fillText(PAYPAL_FIELDS.cardNumber, address.creditCard.number, true);
   filled += fillText(PAYPAL_FIELDS.expiry, expiry.short, true);
   filled += fillText(PAYPAL_FIELDS.csc, address.creditCard.cvv, true);
@@ -278,16 +279,18 @@ function fillPasswordField(value: string): number {
   return 1;
 }
 
-function renderPasswordEmailNote(email: string): void {
+function renderPasswordNote(password: string, email: string): void {
   const anchor = findPasswordDisclaimerAnchor();
   if (!anchor) {
     return;
   }
 
-  fillPasswordField(email);
+  fillPasswordField(password);
 
   const noteId = 'opx-paypal-password-note';
-  const text = `当前密码和邮箱一致（${email}）`;
+  const text = password === email
+    ? `当前密码和邮箱一致（${email}）`
+    : `当前密码使用身份资料（${password}）`;
   let note = document.getElementById(noteId);
   if (!note) {
     note = document.createElement('div');

@@ -53,7 +53,7 @@ export function createSettingsDialog(options: SettingsDialogOptions = {}): Setti
   const payPalSignupItem = createSettingItem(
     payPalSignupCheckbox,
     'PayPal 注册页自动填写',
-    '用于 paypal.com/checkoutweb/signup 页面，填写国家、邮箱、卡资料、姓名、地址和密码提示。',
+    '用于 paypal.com/checkoutweb/signup 页面，填写国家、邮箱、卡资料、姓名、地址和身份资料密码。',
   );
 
   const checkUpdateButton = document.createElement('button');
