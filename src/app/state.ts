@@ -2,6 +2,7 @@ import { DEFAULT_CHECKOUT_OPTIONS, normalizeCheckoutOptions } from '../features/
 import type { FeatureTab } from './types';
 import type { LinkExtractorState } from '../features/link-extractor/types';
 import type { AccountInputMode, HimailEmailMessage, RegisterProvider, RegisterState } from '../features/register/types';
+import type { SessionConverterState, SessionConvertFormat } from '../features/session-converter/types';
 import type { SmsCodeRecord, SmsRelayState } from '../features/sms/types';
 
 export const DEFAULT_API_BASE = 'http://127.0.0.1:8787';
@@ -13,6 +14,7 @@ interface AppState {
   panelCollapsed: boolean;
   register: RegisterState;
   linkExtractor: LinkExtractorState;
+  sessionConverter: SessionConverterState;
   smsRelay: SmsRelayState;
 }
 
@@ -48,11 +50,17 @@ const DEFAULT_SMS_RELAY_STATE: SmsRelayState = {
   updatedAt: 0,
 };
 
+const DEFAULT_SESSION_CONVERTER_STATE: SessionConverterState = {
+  format: 'sub2api',
+  updatedAt: 0,
+};
+
 const DEFAULT_STATE: AppState = {
   activeTab: 'register',
   panelCollapsed: false,
   register: DEFAULT_REGISTER_STATE,
   linkExtractor: DEFAULT_LINK_STATE,
+  sessionConverter: DEFAULT_SESSION_CONVERTER_STATE,
   smsRelay: DEFAULT_SMS_RELAY_STATE,
 };
 
@@ -111,6 +119,22 @@ export async function loadSmsRelayState(): Promise<SmsRelayState> {
   return (await loadAppState()).smsRelay;
 }
 
+export async function loadSessionConverterState(): Promise<SessionConverterState> {
+  return (await loadAppState()).sessionConverter;
+}
+
+export async function saveSessionConverterState(patch: Partial<SessionConverterState>): Promise<SessionConverterState> {
+  const current = await loadAppState();
+  const sessionConverter = normalizeSessionConverterState({
+    ...current.sessionConverter,
+    ...patch,
+    updatedAt: Date.now(),
+  });
+  const next = normalizeAppState({ ...current, sessionConverter });
+  await browser.storage.local.set({ [STORAGE_KEY]: next });
+  return next.sessionConverter;
+}
+
 export async function saveSmsRelayState(patch: Partial<SmsRelayState>): Promise<SmsRelayState> {
   const current = await loadAppState();
   const smsRelay = normalizeSmsRelayState({
@@ -124,19 +148,21 @@ export async function saveSmsRelayState(patch: Partial<SmsRelayState>): Promise<
 }
 
 export function isFeatureTab(value: string): value is FeatureTab {
-  return value === 'register' || value === 'link' || value === 'address' || value === 'sms';
+  return value === 'register' || value === 'link' || value === 'session' || value === 'address' || value === 'sms';
 }
 
 function normalizeAppState(value: unknown): AppState {
   const source = isRecord(value) ? value : {};
   const registerSource = isRecord(source.register) ? source.register : source;
   const linkSource = isRecord(source.linkExtractor) ? source.linkExtractor : source;
+  const sessionConverterSource = isRecord(source.sessionConverter) ? source.sessionConverter : DEFAULT_SESSION_CONVERTER_STATE;
   const smsRelaySource = isRecord(source.smsRelay) ? source.smsRelay : DEFAULT_SMS_RELAY_STATE;
   return {
     activeTab: isFeatureTab(String(source.activeTab || '')) ? source.activeTab as FeatureTab : DEFAULT_STATE.activeTab,
     panelCollapsed: Boolean(source.panelCollapsed),
     register: normalizeRegisterState(registerSource),
     linkExtractor: normalizeLinkExtractorState(linkSource),
+    sessionConverter: normalizeSessionConverterState(sessionConverterSource),
     smsRelay: normalizeSmsRelayState(smsRelaySource),
   };
 }
@@ -186,6 +212,14 @@ function normalizeSmsRelayState(value: unknown): SmsRelayState {
   };
 }
 
+function normalizeSessionConverterState(value: unknown): SessionConverterState {
+  const source = isRecord(value) ? value : {};
+  return {
+    format: normalizeSessionConvertFormat(source.format),
+    updatedAt: Number(source.updatedAt || DEFAULT_SESSION_CONVERTER_STATE.updatedAt),
+  };
+}
+
 function normalizeSmsCodeRecord(value: unknown): SmsCodeRecord | null {
   if (!isRecord(value)) {
     return null;
@@ -213,6 +247,16 @@ function normalizeInputMode(value: unknown): AccountInputMode {
 
 function normalizeRegisterProvider(value: unknown): RegisterProvider {
   return value === 'himail' ? 'himail' : 'default';
+}
+
+function normalizeSessionConvertFormat(value: unknown): SessionConvertFormat {
+  return value === 'cpa' ||
+    value === 'cockpit' ||
+    value === '9router' ||
+    value === 'axonhub' ||
+    value === 'codexmanager'
+    ? value
+    : 'sub2api';
 }
 
 function normalizeStringArray(value: unknown): string[] {

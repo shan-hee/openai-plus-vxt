@@ -86,7 +86,7 @@ export const PANEL_STYLES = `
 
 .opx-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: 0.8fr 0.9fr 1.6fr 0.8fr 0.8fr;
   gap: 4px;
   margin-bottom: 0;
   padding: 3px;
@@ -104,7 +104,7 @@ export const PANEL_STYLES = `
   color: #94a3b8;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -335,9 +335,17 @@ export const PANEL_STYLES = `
   min-height: 92px;
 }
 
+.opx-session-converter-input {
+  min-height: 104px;
+}
+
 .opx-output {
   min-height: 58px;
   resize: vertical;
+}
+
+.opx-session-converter-output {
+  min-height: 130px;
 }
 
 .opx-button-row {
@@ -356,6 +364,14 @@ export const PANEL_STYLES = `
 
 .opx-himail-actions {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.opx-session-converter-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.opx-session-converter-output-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .opx-button {
@@ -460,6 +476,88 @@ export const PANEL_STYLES = `
   min-width: 96px;
   margin: 0;
   padding-inline: 9px;
+}
+
+.opx-session-converter-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.opx-session-converter-stat {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.64);
+}
+
+.opx-session-converter-stat span {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 13px;
+}
+
+.opx-session-converter-stat strong {
+  display: block;
+  min-width: 0;
+  color: #e5f7ef;
+  font-size: 12px;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opx-session-converter-accounts {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.opx-session-converter-account {
+  display: grid;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.opx-session-converter-account strong {
+  min-width: 0;
+  color: #e5f7ef;
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.opx-session-converter-account span {
+  min-width: 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 14px;
+  overflow-wrap: anywhere;
+}
+
+.opx-session-converter-issues {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 7px 8px;
+  border: 1px solid rgba(252, 165, 165, 0.32);
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.18);
+  color: #fca5a5;
+  font-size: 11px;
+  line-height: 15px;
+  overflow-wrap: anywhere;
+}
+
+.opx-session-converter-issues[hidden] {
+  display: none;
 }
 
 .opx-settings-overlay {

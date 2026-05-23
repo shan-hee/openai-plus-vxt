@@ -18,6 +18,12 @@ TG 群组：[https://t.me/fuck_open](https://t.me/fuck_open)
   - 支持生成 ChatGPT checkout 长链接和短链接。
   - Checkout 参数可在插件内调整并持久化。
 
+- Session 转换
+  - 切换到“Session转换”tab 时读取 `https://chatgpt.com/api/auth/session`，也支持手动读取。
+  - 支持粘贴或选择 JSON 文件，提供示例结构和清空操作。
+  - 支持转换为 CPA、sub2api、Cockpit、9router、AxonHub、Codex-Manager JSON。
+  - 支持复制输出和下载 JSON；转换格式会本地持久化，session 原文只在当前面板内使用。
+
 - 地址资料
   - 支持从 `https://www.meiguodizhi.com/` 获取随机地址资料。
   - 支持指定国家、指定城市，或随机国家/随机城市。
@@ -173,6 +179,7 @@ src/
   features/
     register/            注册辅助
     link-extractor/      Checkout 链接提取
+    session-converter/   ChatGPT session 转换导出
     address-autofill/    地址资料和支付页自动填写
     version-check/       GitHub Release 版本检查和更新提示
     sms/                 接码链接轮询和验证码历史
