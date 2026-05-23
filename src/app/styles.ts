@@ -320,6 +320,26 @@ export const PANEL_STYLES = `
   display: none;
 }
 
+.opx-register-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.opx-register-link {
+  color: #93e4bd;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.opx-register-link:hover {
+  color: #bbf7d0;
+  text-decoration: underline;
+}
+
 .opx-field {
   display: block;
   min-width: 0;
@@ -361,7 +381,16 @@ export const PANEL_STYLES = `
 }
 
 .opx-himail-grid {
+  align-items: end;
   grid-template-columns: minmax(0, 1fr) 76px;
+}
+
+.opx-himail-random-field .opx-label {
+  visibility: hidden;
+}
+
+.opx-himail-random-field .opx-button {
+  margin-bottom: 8px;
 }
 
 .opx-himail-actions {

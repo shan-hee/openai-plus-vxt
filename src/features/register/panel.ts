@@ -4,6 +4,13 @@ import type { HimailEmailMessage, RegisterController, RegisterProvider } from '.
 const HIMAIL_POLL_INTERVAL_MS = 7_000;
 
 export function createRegisterPanel(container: HTMLElement, controller: RegisterController): FeaturePanelHandle {
+  const quickLinks = document.createElement('div');
+  quickLinks.className = 'opx-register-links';
+  quickLinks.append(
+    createQuickLink('ChatGPT 首页', 'https://chatgpt.com/'),
+    createQuickLink('打开注册页', 'https://chatgpt.com/auth/login'),
+  );
+
   const providerSelect = createSelect([
     ['default', '默认'],
     ['himail', 'himail.edu.vn'],
@@ -50,6 +57,7 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
   const randomPrefixButton = createButton('随机', 'opx-button opx-button-secondary opx-compact-button');
   const prefixField = createField('前缀', himailPrefix);
   const randomField = createField(' ', randomPrefixButton);
+  randomField.classList.add('opx-himail-random-field');
   himailGrid.append(prefixField, randomField);
 
   const himailDomain = createSelect([]);
@@ -111,6 +119,9 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
     otpButton.disabled = !page.canFillOtp;
     autoOtpButton.disabled = saved.provider !== 'default' || !page.canFillOtp || !saved.autoOtp;
     himailCreateButton.disabled = saved.provider !== 'himail' || !page.canFillEmail;
+    himailCreateButton.title = saved.provider === 'himail' && !page.canFillEmail
+      ? '请先打开 ChatGPT 登录页再创建并继续'
+      : '';
     himailRefreshButton.disabled = saved.provider !== 'himail' || !saved.himailEmail || mailFetchInFlight;
     himailReloadDomainsButton.disabled = saved.provider !== 'himail' || domainFetchInFlight;
     profileButton.disabled = !page.canFillProfile;
@@ -212,7 +223,7 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
     await update();
   });
 
-  container.append(providerField, defaultSection, himailSection, profileButton, status);
+  container.append(quickLinks, providerField, defaultSection, himailSection, profileButton, status);
   void update();
   return {
     update,
@@ -407,6 +418,16 @@ function createField(label: string, control: HTMLElement): HTMLElement {
   return field;
 }
 
+function createQuickLink(label: string, href: string): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.className = 'opx-register-link';
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = label;
+  return link;
+}
+
 function setResult(element: HTMLElement, result: { ok: boolean; message: string }): void {
   setStatus(element, result.message, result.ok ? 'ok' : 'error');
 }
@@ -417,7 +438,15 @@ function setStatus(element: HTMLElement, message: string, type: 'pending' | 'ok'
 }
 
 function randomPrefix(): string {
-  return `opx${Math.random().toString(36).slice(2, 8)}${Date.now().toString().slice(-6)}`;
+  return randomBase36(6);
+}
+
+function randomBase36(length: number): string {
+  let value = '';
+  while (value.length < length) {
+    value += Math.random().toString(36).slice(2);
+  }
+  return value.slice(0, length);
 }
 
 function isEmailVerificationPage(): boolean {

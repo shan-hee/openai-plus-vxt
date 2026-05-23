@@ -456,9 +456,15 @@ function normalizeDomain(value: string, domains: string[]): string {
 }
 
 function randomPrefix(): string {
-  const random = Math.random().toString(36).slice(2, 8);
-  const time = Date.now().toString().slice(-6);
-  return `opx${random}${time}`;
+  return randomBase36(6);
+}
+
+function randomBase36(length: number): string {
+  let value = '';
+  while (value.length < length) {
+    value += Math.random().toString(36).slice(2);
+  }
+  return value.slice(0, length);
 }
 
 function randomLivewireId(): string {
