@@ -2,6 +2,7 @@ import type { SmsRelayTarget } from './types';
 
 const MAX_CODE_LENGTH = 8;
 const MIN_CODE_LENGTH = 4;
+const CODE_PATTERN = new RegExp(`\\b\\d{${MIN_CODE_LENGTH},${MAX_CODE_LENGTH}}\\b`, 'g');
 const MESSAGE_FIELD_NAMES = new Set([
   'data',
   'message',
@@ -82,8 +83,8 @@ export function extractSmsCode(message: string): string {
     return '';
   }
 
-  const matches = trimmed.match(new RegExp(`\\b\\d{${MIN_CODE_LENGTH},${MAX_CODE_LENGTH}}\\b`, 'g'));
-  return matches?.[0] || '';
+  const candidates = collectCodeCandidates(trimmed);
+  return candidates[0]?.code || '';
 }
 
 export function extractSmsPayload(payload: unknown): { code: string; message: string } {
@@ -215,6 +216,90 @@ function scoreCandidate(candidate: MessageCandidate & { code: string }): number 
 
 function hasSmsKeyword(value: string): boolean {
   return /code|验证码|驗證碼|verify|verification|security|otp|paypal|openai|chatgpt/i.test(value);
+}
+
+interface CodeCandidate {
+  code: string;
+  index: number;
+  score: number;
+}
+
+function collectCodeCandidates(message: string): CodeCandidate[] {
+  const candidates: CodeCandidate[] = [];
+  for (const match of message.matchAll(CODE_PATTERN)) {
+    const code = match[0];
+    const index = match.index || 0;
+    candidates.push({
+      code,
+      index,
+      score: scoreCodeCandidate(message, code, index),
+    });
+  }
+
+  return candidates.sort((left, right) => {
+    const scoreDiff = right.score - left.score;
+    return scoreDiff || left.index - right.index;
+  });
+}
+
+function scoreCodeCandidate(message: string, code: string, index: number): number {
+  const lineStart = message.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+  const lineEndIndex = message.indexOf('\n', index);
+  const lineEnd = lineEndIndex < 0 ? message.length : lineEndIndex;
+  const line = message.slice(lineStart, lineEnd);
+  const before = message.slice(Math.max(0, lineStart - 180), lineStart);
+  const after = message.slice(lineEnd, Math.min(message.length, lineEnd + 120));
+  const context = message.slice(Math.max(0, index - 80), Math.min(message.length, index + code.length + 80));
+
+  let score = 0;
+  if (code.length === 6) {
+    score += 25;
+  } else if (code.length === 5) {
+    score += 12;
+  } else if (code.length === 4) {
+    score += 6;
+  }
+  if (isCodeOnlyLine(line, code)) {
+    score += 35;
+  }
+  if (hasVerificationKeyword(line)) {
+    score += 80;
+  }
+  if (hasVerificationKeyword(before)) {
+    score += 60;
+  }
+  if (hasVerificationKeyword(context)) {
+    score += 30;
+  }
+  if (hasVerificationKeyword(after)) {
+    score += 10;
+  }
+  if (isDateLikeLine(line)) {
+    score -= 45;
+  }
+  if (/^(19|20)\d{2}$/.test(code) && isDateLikeLine(line)) {
+    score -= 35;
+  }
+  if (/https?:\/\//i.test(context) || /@[a-z0-9.-]+\.[a-z]{2,}/i.test(context)) {
+    score -= 20;
+  }
+  return score;
+}
+
+function hasVerificationKeyword(value: string): boolean {
+  return /code|passcode|verification|verify|security|otp|验证码|驗證碼|校验码|确认码|臨時驗證碼|临时验证码/i.test(value);
+}
+
+function isCodeOnlyLine(line: string, code: string): boolean {
+  const normalized = line.trim().replace(/[：:.\s-]+$/g, '');
+  return normalized === code;
+}
+
+function isDateLikeLine(line: string): boolean {
+  return /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b/i.test(line) ||
+    /\b(?:am|pm)\b/i.test(line) ||
+    /\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(line) ||
+    /\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b/.test(line);
 }
 
 function isEmptyMessage(value: string): boolean {

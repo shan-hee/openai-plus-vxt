@@ -204,7 +204,7 @@ export async function fetchHimailMessages(emailInput?: string): Promise<HimailFe
     serverMemo: session.appServerMemo,
   };
   const messages = extractMessagesFromLivewireResponse(responseWithFullMemo, html, session.email);
-  const code = messages.find((message) => message.code)?.code || extractSmsCode(html);
+  const code = messages.find((message) => message.code)?.code || extractSmsCode(stripHtml(html));
 
   return {
     ok: true,
@@ -360,7 +360,9 @@ function normalizeMessageObject(value: unknown, index: number, email: string): H
   const from = stringValue(value.from);
   const to = stringValue(value.to) || email;
   const date = stringValue(value.date) || stringValue(value.received_at) || stringValue(value.created_at);
-  const code = extractSmsCode(`${subject}\n${body}`);
+  const cleanSubject = stripHtml(subject);
+  const cleanBody = stripHtml(body);
+  const code = extractSmsCode(`${cleanSubject}\n${cleanBody}`);
   const receivedAt = Number(value.receivedAt || value.received_at || 0) || Date.now();
   const id = stringValue(value.id) || `${email}-${date}-${subject}-${index}`;
 
@@ -372,9 +374,9 @@ function normalizeMessageObject(value: unknown, index: number, email: string): H
     id,
     from,
     to,
-    subject,
+    subject: cleanSubject,
     date,
-    body: stripHtml(body),
+    body: cleanBody,
     code,
     receivedAt,
   };
