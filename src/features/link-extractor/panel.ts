@@ -28,8 +28,8 @@ export function createLinkExtractorPanel(container: HTMLElement): FeaturePanelHa
     ['chatgptteamplan', 'ChatGPT Team'],
   ]);
   const uiModeSelect = createSelect([
-    ['custom', '短链接 / custom'],
     ['hosted', '长链接 / hosted'],
+    ['custom', '短链接 / custom'],
   ]);
   const regionSelect = createSelect(REGION_OPTIONS);
   const workspaceInput = createInput('Workspace 名称', 'text');

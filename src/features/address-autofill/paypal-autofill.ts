@@ -7,9 +7,14 @@ import type { AddressProfile, RandomAddressResponse } from './types';
 const LOG_PREFIX = '[OPX PayPal Autofill]';
 const PAYPAL_ADDRESS_SESSION_KEY = 'opx.paypal.autofill.address';
 const PAYPAL_PENDING_MANUAL_KEY = 'opx.paypal.autofill.pendingManual';
+const PAYPAL_PASSWORD_SESSION_PREFIX = 'opx.paypal.autofill.password.';
 const PAYPAL_FILLED_ATTR = 'data-opx-paypal-filled';
 const PAYPAL_RANDOM_BUTTON_ID = 'opx-paypal-random-fill';
 const MAX_AUTOFILL_ATTEMPTS_PER_PAGE = 3;
+const PAYPAL_PASSWORD_LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const PAYPAL_PASSWORD_DIGITS = '0123456789';
+const PAYPAL_PASSWORD_SYMBOLS = '!@#$%^';
+const PAYPAL_PASSWORD_ALL = `${PAYPAL_PASSWORD_LETTERS}${PAYPAL_PASSWORD_DIGITS}${PAYPAL_PASSWORD_SYMBOLS}`;
 const PAYPAL_COUNTRY_LABELS: Record<string, string> = {
   AR: 'Argentina',
   AU: 'Australia',
@@ -174,13 +179,13 @@ async function fillPaypalSignupFields(address: AddressProfile, allowRetry: boole
   }
 
   const email = await resolveEmail(address);
-  const password = address.identity.password || email;
+  const password = getPaypalPasswordForPage(address);
   const name = splitName(address.fullName);
   const expiry = parseExpiry(address.creditCard.expires);
 
   filled += fillText(PAYPAL_FIELDS.email, email, true);
   filled += fillPasswordField(password);
-  renderPasswordNote(password, email);
+  renderPasswordNote(password);
   filled += fillText(PAYPAL_FIELDS.cardNumber, address.creditCard.number, true);
   filled += fillText(PAYPAL_FIELDS.expiry, expiry.short, true);
   filled += fillText(PAYPAL_FIELDS.csc, address.creditCard.cvv, true);
@@ -279,7 +284,7 @@ function fillPasswordField(value: string): number {
   return 1;
 }
 
-function renderPasswordNote(password: string, email: string): void {
+function renderPasswordNote(password: string): void {
   const anchor = findPasswordDisclaimerAnchor();
   if (!anchor) {
     return;
@@ -288,9 +293,7 @@ function renderPasswordNote(password: string, email: string): void {
   fillPasswordField(password);
 
   const noteId = 'opx-paypal-password-note';
-  const text = password === email
-    ? `当前密码和邮箱一致（${email}）`
-    : `当前密码使用身份资料（${password}）`;
+  const text = `当前密码由插件生成（${password}）`;
   let note = document.getElementById(noteId);
   if (!note) {
     note = document.createElement('div');
@@ -313,6 +316,67 @@ function renderPasswordNote(password: string, email: string): void {
   }
   parent.insertBefore(note, anchor);
   note.textContent = text;
+}
+
+function getPaypalPasswordForPage(address: AddressProfile): string {
+  const key = `${PAYPAL_PASSWORD_SESSION_PREFIX}${pageAttemptKey(address)}`;
+  try {
+    const saved = sessionStorage.getItem(key);
+    if (isGeneratedPaypalPassword(saved)) {
+      return saved;
+    }
+    const password = generatePaypalPassword();
+    sessionStorage.setItem(key, password);
+    return password;
+  } catch {
+    return generatePaypalPassword();
+  }
+}
+
+function generatePaypalPassword(): string {
+  const chars = [
+    pickPasswordChar(PAYPAL_PASSWORD_LETTERS),
+    Math.random() < 0.5
+      ? pickPasswordChar(PAYPAL_PASSWORD_DIGITS)
+      : pickPasswordChar(PAYPAL_PASSWORD_SYMBOLS),
+  ];
+  const length = randomInt(12, 16);
+  while (chars.length < length) {
+    chars.push(pickPasswordChar(PAYPAL_PASSWORD_ALL));
+  }
+  return shufflePasswordChars(chars).join('');
+}
+
+function isGeneratedPaypalPassword(value: string | null): value is string {
+  return Boolean(
+    value &&
+      value.length >= 8 &&
+      value.length <= 20 &&
+      /[A-Za-z]/.test(value) &&
+      /[0-9!@#$%^]/.test(value),
+  );
+}
+
+function pickPasswordChar(chars: string): string {
+  return chars[randomInt(0, chars.length - 1)] || chars[0];
+}
+
+function shufflePasswordChars(chars: string[]): string[] {
+  for (let index = chars.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(0, index);
+    [chars[index], chars[swapIndex]] = [chars[swapIndex], chars[index]];
+  }
+  return chars;
+}
+
+function randomInt(min: number, max: number): number {
+  const range = max - min + 1;
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return min + (values[0] % range);
+  }
+  return Math.floor(Math.random() * range) + min;
 }
 
 function fillSelectOrInput(selectors: string[], preferredValue: string, preferredLabels: string[]): number {

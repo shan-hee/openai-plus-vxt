@@ -32,7 +32,7 @@ TG 群组：[https://t.me/fuck_open](https://t.me/fuck_open)
 
 - 支付页自动填写
   - `pay.openai.com/c/pay`：自动选择 PayPal、填写姓名、国家、地址、邮编，并勾选条款。
-  - `paypal.com/checkoutweb/signup`：自动填写国家、邮箱、卡资料、姓名、地址、身份资料密码，并显示当前密码提示。
+  - `paypal.com/checkoutweb/signup`：自动填写国家、邮箱、卡资料、姓名、地址，并生成符合 PayPal 规则的密码。
   - 两个页面的自动填写开关在设置里独立控制，默认开启。
 
 - 插件面板
