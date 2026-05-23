@@ -17,7 +17,7 @@ export const PANEL_STYLES = `
 
 .opx-panel {
   box-sizing: border-box;
-  width: min(320px, calc(100vw - 42px));
+  width: min(360px, calc(100vw - 42px));
   max-height: calc(100vh - 88px);
   margin-right: 18px;
   padding: 10px;
@@ -86,7 +86,7 @@ export const PANEL_STYLES = `
 
 .opx-tabs {
   display: grid;
-  grid-template-columns: 0.8fr 0.9fr 1.6fr 0.8fr 0.8fr;
+  grid-template-columns: 0.85fr 1.05fr 1.55fr 0.8fr 0.8fr;
   gap: 4px;
   margin-bottom: 0;
   padding: 3px;
@@ -96,8 +96,10 @@ export const PANEL_STYLES = `
 }
 
 .opx-tab {
+  box-sizing: border-box;
   height: 30px;
   min-width: 0;
+  padding: 0 4px;
   border: 0;
   border-radius: 6px;
   background: transparent;
