@@ -40,7 +40,7 @@ export function createPanel(root: ShadowRoot, registerController: RegisterContro
   const sessionTab = createTab('session', 'Session转换');
   const addressTab = createTab('address', '地址');
   const smsTab = createTab('sms', '接码');
-  tabs.append(registerTab, linkTab, sessionTab, addressTab, smsTab);
+  tabs.append(registerTab, linkTab, addressTab, smsTab, sessionTab);
 
   const settingsButton = document.createElement('button');
   settingsButton.className = 'opx-icon-button';
@@ -91,7 +91,7 @@ export function createPanel(root: ShadowRoot, registerController: RegisterContro
   };
 
   const renderActiveTab = () => {
-    for (const item of [registerTab, linkTab, sessionTab, addressTab, smsTab]) {
+    for (const item of [registerTab, linkTab, addressTab, smsTab, sessionTab]) {
       item.classList.toggle('is-active', item.dataset.tab === activeTab);
     }
     registerView.hidden = activeTab !== 'register';

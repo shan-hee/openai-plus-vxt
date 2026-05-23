@@ -86,7 +86,7 @@ export const PANEL_STYLES = `
 
 .opx-tabs {
   display: grid;
-  grid-template-columns: 0.85fr 1.05fr 1.55fr 0.8fr 0.8fr;
+  grid-template-columns: 0.85fr 1.05fr 0.8fr 0.8fr 1.55fr;
   gap: 4px;
   margin-bottom: 0;
   padding: 3px;
