@@ -4,13 +4,6 @@ import type { HimailEmailMessage, RegisterController, RegisterProvider } from '.
 const HIMAIL_POLL_INTERVAL_MS = 7_000;
 
 export function createRegisterPanel(container: HTMLElement, controller: RegisterController): FeaturePanelHandle {
-  const quickLinks = document.createElement('div');
-  quickLinks.className = 'opx-register-links';
-  quickLinks.append(
-    createQuickLink('ChatGPT 首页', 'https://chatgpt.com/'),
-    createQuickLink('打开注册页', 'https://chatgpt.com/auth/login'),
-  );
-
   const providerSelect = createSelect([
     ['default', '默认'],
     ['himail', 'himail.edu.vn'],
@@ -223,7 +216,7 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
     await update();
   });
 
-  container.append(quickLinks, providerField, defaultSection, himailSection, profileButton, status);
+  container.append(providerField, defaultSection, himailSection, profileButton, status);
   void update();
   return {
     update,
@@ -416,16 +409,6 @@ function createField(label: string, control: HTMLElement): HTMLElement {
   caption.textContent = label;
   field.append(caption, control);
   return field;
-}
-
-function createQuickLink(label: string, href: string): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.className = 'opx-register-link';
-  link.href = href;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = label;
-  return link;
 }
 
 function setResult(element: HTMLElement, result: { ok: boolean; message: string }): void {

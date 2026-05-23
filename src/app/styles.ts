@@ -145,6 +145,17 @@ export const PANEL_STYLES = `
   line-height: 16px;
 }
 
+.opx-state-link {
+  color: #bbf7d0;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.opx-state-link:hover {
+  color: #dcfce7;
+  text-decoration: underline;
+}
+
 .opx-version-notice {
   display: grid;
   gap: 7px;
@@ -318,26 +329,6 @@ export const PANEL_STYLES = `
 
 .opx-register-section[hidden] {
   display: none;
-}
-
-.opx-register-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  margin: 0 0 8px;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.opx-register-link {
-  color: #93e4bd;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.opx-register-link:hover {
-  color: #bbf7d0;
-  text-decoration: underline;
 }
 
 .opx-field {

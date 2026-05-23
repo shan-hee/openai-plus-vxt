@@ -106,7 +106,7 @@ export function createPanel(root: ShadowRoot, registerController: RegisterContro
     activeTab = saved.activeTab;
     setCollapsed(saved.panelCollapsed);
     renderActiveTab();
-    state.textContent = getStateLabel(activeTab, registerController);
+    renderStateLabel(state, activeTab, registerController);
     await handles[activeTab].update();
   };
 
@@ -149,6 +149,31 @@ function getStateLabel(activeTab: FeatureTab, registerController: RegisterContro
     return '地址：随机资料';
   }
   return '接码：短信验证码';
+}
+
+function renderStateLabel(state: HTMLElement, activeTab: FeatureTab, registerController: RegisterController): void {
+  state.replaceChildren();
+
+  if (activeTab !== 'register') {
+    state.textContent = getStateLabel(activeTab, registerController);
+    return;
+  }
+
+  const pageState = registerController.getPageState();
+  state.append(document.createTextNode(pageState.label));
+  if (pageState.kind === 'login') {
+    state.append(document.createTextNode('  '), createStateLink('打开注册页', 'https://chatgpt.com/auth/login'));
+  }
+}
+
+function createStateLink(label: string, href: string): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.className = 'opx-state-link';
+  link.href = href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = label;
+  return link;
 }
 
 function createView(): HTMLElement {

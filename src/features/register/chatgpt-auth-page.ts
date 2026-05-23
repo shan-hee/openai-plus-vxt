@@ -13,7 +13,8 @@ const SUBMIT_SELECTORS = [
 ];
 
 export function isChatGptLoginPage(): boolean {
-  return location.hostname === 'chatgpt.com' && location.pathname.startsWith('/auth/login');
+  return location.hostname === 'chatgpt.com' &&
+    (location.pathname === '/' || location.pathname.startsWith('/auth/login'));
 }
 
 export async function fillEmailAndContinue(email: string): Promise<ActionResult> {
