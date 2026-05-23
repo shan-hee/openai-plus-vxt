@@ -151,20 +151,20 @@ email----password----client_id----refresh_token
 
 ## 发布版本
 
-后续如果上传到 GitHub，建议使用 GitHub Releases 发布版本：
+项目通过 GitHub Actions 自动构建并发布 GitHub Release：
 
 1. 修改 `package.json` 中的 `version`。
-2. 执行：
+2. 提交并推送到 GitHub 的 `main` 或 `master` 分支。
+3. GitHub Actions 会自动执行：
 
 ```bash
 pnpm compile
-pnpm build
 pnpm zip
 ```
 
-3. 在 GitHub Releases 中创建 `vX.Y.Z` 版本。
-4. 上传 `.output` 中生成的 zip 文件。
-5. 在 Release notes 写更新说明。
+4. 构建成功后会自动创建 `vX.Y.Z` Release，并上传 `.output` 中生成的 zip 文件。
+
+如果需要手动触发发布，可在 GitHub 仓库的 Actions 页面运行 `Release` workflow。若对应版本的 `vX.Y.Z` tag 已存在，workflow 会跳过发布，避免重复创建 Release。
 
 插件会通过 GitHub Releases API 检测最新正式版。如果最新版本高于当前插件版本，会在插件顶部显示更新提示、下载地址和更新说明。设置页也提供“检测更新”按钮，可手动强制刷新版本检查。
 

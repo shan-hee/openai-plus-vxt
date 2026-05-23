@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - package.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read package version
+        id: package
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          name="$(node -p "require('./package.json').name")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Check release tag
+        id: tag
+        shell: bash
+        run: |
+          if git rev-parse "${{ steps.package.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release tag ${{ steps.package.outputs.tag }} already exists."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        if: steps.tag.outputs.exists == 'false'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.2.2
+
+      - name: Setup Node.js
+        if: steps.tag.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.tag.outputs.exists == 'false'
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        if: steps.tag.outputs.exists == 'false'
+        run: pnpm compile
+
+      - name: Build zip
+        if: steps.tag.outputs.exists == 'false'
+        run: pnpm zip
+
+      - name: Locate zip
+        if: steps.tag.outputs.exists == 'false'
+        id: artifact
+        shell: bash
+        run: |
+          artifact_path="$(find .output -maxdepth 1 -type f -name "${{ steps.package.outputs.name }}-${{ steps.package.outputs.version }}-*.zip" -print -quit)"
+          if [ -z "$artifact_path" ]; then
+            artifact_path="$(find .output -maxdepth 1 -type f -name "*.zip" -print -quit)"
+          fi
+          if [ -z "$artifact_path" ]; then
+            echo "No zip artifact found in .output"
+            exit 1
+          fi
+          echo "artifact_path=${artifact_path}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.package.outputs.tag }}" \
+            "${{ steps.artifact.outputs.artifact_path }}" \
+            --title "${{ steps.package.outputs.tag }}" \
+            --generate-notes
