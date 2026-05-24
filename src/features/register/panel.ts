@@ -97,6 +97,7 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
   let mailFetchInFlight = false;
   let pollTimer: number | undefined;
   let lastDomainValues = '';
+  let lastHimailSummaryValues = '';
 
   const update = async () => {
     const page = controller.getPageState();
@@ -340,12 +341,58 @@ export function createRegisterPanel(container: HTMLElement, controller: Register
   }
 
   function renderHimailSummary(email: string, code: string, fetchedAt: number): void {
-    const lines = [
-      email ? `当前邮箱：${email}` : '当前邮箱：未创建',
-      code ? `验证码：${code}` : '验证码：未收到',
-      fetchedAt ? `最后刷新：${new Date(fetchedAt).toLocaleTimeString()}` : '最后刷新：尚未刷新',
-    ];
-    himailSummary.textContent = lines.join('\n');
+    const fetchedLabel = fetchedAt ? new Date(fetchedAt).toLocaleTimeString() : '尚未刷新';
+    const signature = `${email}::${code}::${fetchedAt}`;
+    if (signature === lastHimailSummaryValues) {
+      return;
+    }
+    lastHimailSummaryValues = signature;
+    himailSummary.replaceChildren(
+      createHimailSummaryRow('当前邮箱', email || '未创建', email),
+      createHimailSummaryRow('验证码', code || '未收到', code),
+      createHimailSummaryRow('最后刷新', fetchedLabel, fetchedAt ? fetchedLabel : ''),
+    );
+  }
+
+  function createHimailSummaryRow(label: string, value: string, copyValue: string): HTMLButtonElement {
+    const row = document.createElement('button');
+    row.className = 'opx-himail-summary-row';
+    row.type = 'button';
+    row.disabled = !copyValue;
+    row.title = copyValue ? `点击复制${label}` : `暂无可复制的${label}`;
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'opx-himail-summary-label';
+    labelElement.textContent = `${label}：`;
+
+    const valueElement = document.createElement('strong');
+    valueElement.textContent = value;
+
+    const feedbackElement = document.createElement('span');
+    feedbackElement.className = 'opx-copy-feedback';
+    feedbackElement.textContent = '已复制';
+    feedbackElement.hidden = true;
+
+    let feedbackTimer: number | null = null;
+    row.append(labelElement, valueElement, feedbackElement);
+    row.addEventListener('click', async () => {
+      if (!copyValue) {
+        return;
+      }
+      await navigator.clipboard.writeText(copyValue);
+      setStatus(status, `${label}已复制`, 'ok');
+      if (feedbackTimer) {
+        window.clearTimeout(feedbackTimer);
+      }
+      row.classList.add('is-copied');
+      feedbackElement.hidden = false;
+      feedbackTimer = window.setTimeout(() => {
+        row.classList.remove('is-copied');
+        feedbackElement.hidden = true;
+        feedbackTimer = null;
+      }, 1400);
+    });
+    return row;
   }
 
   function renderHimailMessages(messages: HimailEmailMessage[]): void {

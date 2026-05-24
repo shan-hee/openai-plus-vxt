@@ -291,6 +291,53 @@ export const PANEL_STYLES = `
   white-space: pre-line;
 }
 
+.opx-himail-summary-row {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0;
+  align-items: start;
+  width: 100%;
+  min-height: 15px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: 15px;
+  text-align: left;
+}
+
+.opx-himail-summary-row:hover:not(:disabled) {
+  color: #dcfce7;
+}
+
+.opx-himail-summary-row:disabled {
+  cursor: default;
+}
+
+.opx-himail-summary-row.is-copied strong {
+  color: #86efac;
+}
+
+.opx-himail-summary-label {
+  color: #bbf7d0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.opx-himail-summary-row strong {
+  min-width: 0;
+  color: #bbf7d0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.opx-himail-summary-row .opx-copy-feedback {
+  margin-left: 6px;
+}
+
 .opx-session-card {
   display: grid;
   gap: 5px;
